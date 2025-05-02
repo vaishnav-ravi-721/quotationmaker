@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <div class="theme-selector">
+    <div class="theme-selector" id="chooseColor">
       <div class="theme-btn theme-blue active" onclick="changeTheme('blue')" title="Blue Theme"></div>
       <div class="theme-btn theme-green" onclick="changeTheme('green')" title="Green Theme"></div>
       <div class="theme-btn theme-red" onclick="changeTheme('red')" title="Red Theme"></div>
@@ -21,7 +21,7 @@
       <button onclick="clearAllCustomerDetails()">Clear Customer Details</button>
       <button onclick="clearAllItems()">Clear Item List</button>
       <button onclick="clearLocalStorageAndReload()">Clear All</button>
-      <button onclick="printBill()">Print Bill</button>
+      <button onclick="downloadPDF()">PDF</button>
     </div>
 
     <div id="main-container">
@@ -200,5 +200,6 @@
         }
       }
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   </body>
 </html>
