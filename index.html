@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Billing App with Persistence</title>
+  <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div class="theme-selector">
+      <div class="theme-btn theme-blue active" onclick="changeTheme('blue')" title="Blue Theme"></div>
+      <div class="theme-btn theme-green" onclick="changeTheme('green')" title="Green Theme"></div>
+      <div class="theme-btn theme-red" onclick="changeTheme('red')" title="Red Theme"></div>
+      <div class="theme-btn theme-purple" onclick="changeTheme('purple')" title="Purple Theme"></div>
+      <div class="theme-btn theme-orange" onclick="changeTheme('orange')" title="Orange Theme"></div>
+      <div class="theme-btn theme-dark" onclick="changeTheme('dark')" title="Dark Theme"></div>
+    </div>
+
+    <div id="tools">
+      <button onclick="show()">SHOW</button>
+      <button onclick="clearAllCustomerDetails()">Clear Customer Details</button>
+      <button onclick="clearAllItems()">Clear Item List</button>
+      <button onclick="clearLocalStorageAndReload()">Clear All</button>
+      <button onclick="printBill()">Print Bill</button>
+    </div>
+
+    <div id="main-container">
+      <div id="bill-container" style="display: none">
+        <div class="company-details">
+          <div class="top-name" contenteditable="true" oninput="saveToLocalStorage()" id="companyName">
+            COMPANY NAME
+          </div>
+          <div class="contact">
+            <p contenteditable="true" oninput="saveToLocalStorage()" id="companyAddr">Address</p>
+            <p contenteditable="true" oninput="saveToLocalStorage()" id="companyPhone">+91 01234-56789</p>
+          </div>
+        </div>
+        <div class="customer-details">
+          <table>
+            <tr>
+              <td class="label">
+                Name: <input type="text" id="custName" oninput="saveToLocalStorage()" />
+              </td>
+              <td class="label">
+                Bill no: <input type="text" id="billNo" oninput="saveToLocalStorage()" />
+              </td>
+            </tr>
+            <tr>
+              <td class="label">
+                Address: <input type="text" id="custAddr" oninput="saveToLocalStorage()" />
+              </td>
+              <td class="label">
+                Contact no: <input type="text" id="custPhone" oninput="saveToLocalStorage()" pattern="[0-9]*" inputmode="numeric"/>
+              </td>
+              
+            </tr>
+            <tr>
+              
+              <td class="label">
+                Date: <input type="text" id="billDate" oninput="saveToLocalStorage()" />
+              </td>
+              <td></td>
+            </tr>
+          </table>
+        </div>
+        <div class="list-of-items">
+          <table id="copyList">
+            <tr>
+              <th>Sr No</th>
+              <th>Particulars</th>
+              <th>Area</th>
+              <th>Rate</th>
+              <th>Qty</th>
+              <th>Amount</th>
+              <th>Remove</th>
+            </tr>
+          </table>
+          <table>
+            <tr>
+              <td colspan="5" class="total-cell">TOTAL</td>
+              <td id="copyTotalAmount" class="total-cell">0.00</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div id="add-item-container">
+        <div class="size-input">
+          <input id="width" type="text" placeholder="Width"  pattern="[0-9]*" inputmode="numeric"/>
+          <input id="height" type="text" placeholder="Height"  pattern="[0-9]*" inputmode="numeric"/>
+          <input id="depth" type="text" placeholder="Depth"  pattern="[0-9]*" inputmode="numeric"/>
+        </div>
+        <div class="size-input">
+          <input id="rate" type="text" placeholder="Rate"  pattern="[0-9]*" inputmode="numeric"/>
+          <input id="quantity" type="text" placeholder="Quantity"  pattern="[0-9]*" inputmode="numeric"/>
+          <select id="selectMeasurement">
+            <option value="ft">ft</option>
+            <option value="inch">inch</option>
+            <option value="cm">cm</option>
+            <option value="mm">mm</option>
+          </select>
+        </div>
+        <div class="size-input">
+          <input id="itemName" type="text" list="item-list" placeholder="Custom Item Name..." />
+          <datalist id="item-list">
+            <option value="wardrobe"></option>
+            <option value="cupboard"></option>
+            <option value="Loft"></option>
+          </datalist>
+          <button onclick="addRow()">Add Item</button>
+        </div>
+        <div id="addedItems">
+          <table id="createList">
+            <tr>
+              <th>Sr No</th>
+              <th>Particulars</th>
+              <th>Area</th>
+              <th>Rate</th>
+              <th>Qty</th>
+              <th>Amount</th>
+              <th>Remove</th>
+            </tr>
+          </table>
+          <table>
+            <tr>
+              <td colspan="5" class="total-cell">TOTAL AMT</td>
+              <td id="createTotalAmount" class="total-cell">0.00</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script src="index.js"></script>
+
+    <script>
+      // Theme switching functionality
+      function changeTheme(theme) {
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        const root = document.documentElement;
+        
+        switch(theme) {
+          case 'blue':
+            root.style.setProperty('--primary-color', '#3498db');
+            root.style.setProperty('--secondary-color', '#2980b9');
+            root.style.setProperty('--text-color', '#333');
+            root.style.setProperty('--bg-color', '#f9f9f9');
+            root.style.setProperty('--border-color', '#ddd');
+            root.style.setProperty('--highlight-color', '#f1c40f');
+            root.style.setProperty('--total-bg', '#ecf0f1');
+            break;
+          case 'green':
+            root.style.setProperty('--primary-color', '#2ecc71');
+            root.style.setProperty('--secondary-color', '#27ae60');
+            root.style.setProperty('--text-color', '#333');
+            root.style.setProperty('--bg-color', '#f9f9f9');
+            root.style.setProperty('--border-color', '#ddd');
+            root.style.setProperty('--highlight-color', '#f1c40f');
+            root.style.setProperty('--total-bg', '#eafaf1');
+            break;
+          case 'red':
+            root.style.setProperty('--primary-color', '#e74c3c');
+            root.style.setProperty('--secondary-color', '#c0392b');
+            root.style.setProperty('--text-color', '#333');
+            root.style.setProperty('--bg-color', '#f9f9f9');
+            root.style.setProperty('--border-color', '#ddd');
+            root.style.setProperty('--highlight-color', '#f1c40f');
+            root.style.setProperty('--total-bg', '#fdedec');
+            break;
+          case 'purple':
+            root.style.setProperty('--primary-color', '#9b59b6');
+            root.style.setProperty('--secondary-color', '#8e44ad');
+            root.style.setProperty('--text-color', '#333');
+            root.style.setProperty('--bg-color', '#f9f9f9');
+            root.style.setProperty('--border-color', '#ddd');
+            root.style.setProperty('--highlight-color', '#f1c40f');
+            root.style.setProperty('--total-bg', '#f5eef8');
+            break;
+          case 'orange':
+            root.style.setProperty('--primary-color', '#f26d38');
+            root.style.setProperty('--secondary-color', '#e67e22');
+            root.style.setProperty('--text-color', '#333');
+            root.style.setProperty('--bg-color', '#f9f9f9');
+            root.style.setProperty('--border-color', '#ddd');
+            root.style.setProperty('--highlight-color', '#f1c40f');
+            root.style.setProperty('--total-bg', '#fef5e7');
+            break;
+          case 'dark':
+            root.style.setProperty('--primary-color', '#34495e');
+            root.style.setProperty('--secondary-color', '#2c3e50');
+            root.style.setProperty('--text-color', '#000');
+            root.style.setProperty('--bg-color', '#fff');
+            root.style.setProperty('--border-color', '#34495e');
+            root.style.setProperty('--highlight-color', '#f1c40f');
+            root.style.setProperty('--total-bg', '#e1e1e1');
+            break;
+        }
+      }
+    </script>
+  </body>
+</html>
