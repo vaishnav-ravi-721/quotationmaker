@@ -186,23 +186,42 @@ function clearAllItems() {
 }
 
 function printBill() {
+  
+
+  window.print();
+}
+
+function downloadPDF() {
+  const element = document.body;  // Capture the entire body
   const tools = document.getElementById("tools");
   const page_1 = document.getElementById("createList");
   const page_2 = document.getElementById("copyList");
+  const chooseColor = document.getElementById("chooseColor");
 
   hideTableColumn(page_1, 6, "none");
   hideTableColumn(page_2, 6, "none");
+  chooseColor.style.display = "none";
 
   tools.style.display = "none";
 
   setTimeout(() => {
-    tools.style.display = "block";
+    tools.style.display = "flex";
     hideTableColumn(page_1, 6, "table-cell");
     hideTableColumn(page_2, 6, "table-cell");
+    chooseColor.style.display = "flex";
   }, 2000);
 
-  window.print();
+  const opt = {
+    margin: 0,
+    filename: 'download.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save();
 }
+
 
 window.onload = loadFromLocalStorage;
 
