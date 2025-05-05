@@ -1,4 +1,13 @@
+
 let rowCounter = 1;
+let currentlyEditingRowId = null;
+let historyStack = [];
+let historyIndex = -1;
+
+// Initialize history when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  saveStateToHistory();
+});
 
 function show() {
   const bill = document.getElementById("bill-container");
@@ -37,6 +46,7 @@ function addRow() {
   updateSerialNumbers();
   updateTotal();
   saveToLocalStorage();
+  saveStateToHistory();
 
   ["width", "height", "depth", "rate", "quantity", "itemName"].forEach(id => {
     document.getElementById(id).value = "";
@@ -45,9 +55,73 @@ function addRow() {
   document.getElementById("width").focus();
 }
 
+function updateRow() {
+  if (!currentlyEditingRowId) return;
+
+  let width = parseFloat(document.getElementById("width").value.trim());
+  let height = parseFloat(document.getElementById("height").value.trim());
+  let depth = parseFloat(document.getElementById("depth").value.trim());
+  let rate = parseFloat(document.getElementById("rate").value.trim());
+  let quantity = parseInt(document.getElementById("quantity").value.trim());
+  let itemName = document.getElementById("itemName").value.trim();
+  let measurement = document.getElementById("selectMeasurement").value.trim();
+
+  itemName += `<p class="sizes"> W ${width}${measurement} x H ${height}${measurement} x D ${depth}${measurement} </p>`;
+
+  if (isNaN(width) || isNaN(height) || isNaN(rate) || isNaN(quantity) || !itemName) {
+    alert("Please enter all the inputs.");
+    return;
+  }
+
+  let area = convertToFeet(width, measurement) * convertToFeet(height, measurement);
+  let amount = (Number(area) * Number(rate)) * Number(quantity);
+
+  // Update both tables
+  const rows1 = document.querySelectorAll(`#createList tr[data-id="${currentlyEditingRowId}"]`);
+  const rows2 = document.querySelectorAll(`#copyList tr[data-id="${currentlyEditingRowId}"]`);
+
+  rows1.forEach(row => {
+    const cells = row.children;
+    cells[1].innerHTML = itemName;
+    cells[2].textContent = area.toFixed(2) + ' ft²';
+    cells[3].textContent = rate.toFixed(2);
+    cells[4].textContent = quantity;
+    cells[5].textContent = amount.toFixed(2);
+  });
+
+  rows2.forEach(row => {
+    const cells = row.children;
+    cells[1].innerHTML = itemName;
+    cells[2].textContent = area.toFixed(2) + ' ft²';
+    cells[3].textContent = rate.toFixed(2);
+    cells[4].textContent = quantity;
+    cells[5].textContent = amount.toFixed(2);
+  });
+
+  updateSerialNumbers();
+  updateTotal();
+  saveToLocalStorage();
+  saveStateToHistory();
+
+  // Reset form
+  ["width", "height", "depth", "rate", "quantity", "itemName"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+
+  // Switch back to add mode
+  document.getElementById("addItemBtn").style.display = "inline-block";
+  document.getElementById("updateItemBtn").style.display = "none";
+  currentlyEditingRowId = null;
+
+  document.getElementById("width").focus();
+}
+
 function createTableRow(id, itemName, area, rate, quantity, amount) {
   const tr = document.createElement("tr");
   tr.setAttribute("data-id", id);
+  tr.addEventListener('click', function() {
+    editRow(id);
+  });
   tr.innerHTML = `
     <td class="sr-no"></td>
     <td class="itemNameClass">${itemName}</td>
@@ -60,11 +134,47 @@ function createTableRow(id, itemName, area, rate, quantity, amount) {
   return tr;
 }
 
+function editRow(id) {
+  const row = document.querySelector(`#createList tr[data-id="${id}"]`);
+  if (!row) return;
+
+  currentlyEditingRowId = id;
+  
+  // Extract data from the row
+  const cells = row.children;
+  const itemNameHtml = cells[1].innerHTML;
+  
+  // Extract the main item name (before the sizes paragraph)
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = itemNameHtml;
+  const itemName = tempDiv.childNodes[0].textContent.trim();
+  
+  // Extract dimensions from the sizes paragraph
+  const sizesText = tempDiv.querySelector('.sizes')?.textContent || '';
+  const dimensions = sizesText.match(/W ([\d.]+)([a-z]+) x H ([\d.]+)([a-z]+) x D ([\d.]+)([a-z]+)/);
+  
+  if (dimensions) {
+    document.getElementById("width").value = dimensions[1];
+    document.getElementById("height").value = dimensions[3];
+    document.getElementById("depth").value = dimensions[5];
+    document.getElementById("selectMeasurement").value = dimensions[2]; // Assuming all dimensions use same unit
+  }
+  
+  document.getElementById("rate").value = cells[3].textContent;
+  document.getElementById("quantity").value = cells[4].textContent;
+  document.getElementById("itemName").value = itemName;
+  
+  // Switch to update mode
+  document.getElementById("addItemBtn").style.display = "none";
+  document.getElementById("updateItemBtn").style.display = "inline-block";
+}
+
 function removeRow(id) {
   document.querySelectorAll(`tr[data-id="${id}"]`).forEach(row => row.remove());
   updateSerialNumbers();
   updateTotal();
   saveToLocalStorage();
+  saveStateToHistory();
 }
 
 function updateSerialNumbers() {
@@ -135,13 +245,20 @@ function loadFromLocalStorage() {
   document.getElementById("billDate").value = data.customer.date;
   document.getElementById("custPhone").value = data.customer.phone;
 
+  // Find the highest row ID to continue counting from there
+  let maxId = 0;
+  data.items.forEach(row => {
+    const idNum = parseInt(row.id.split('-')[1]);
+    if (idNum > maxId) maxId = idNum;
+  });
+  rowCounter = maxId + 1;
+
   data.items.forEach(row => {
     const row1 = createTableRow(row.id, row.item, parseFloat(row.area), parseFloat(row.rate), parseInt(row.qty), parseFloat(row.amt));
     const row2 = createTableRow(row.id, row.item, parseFloat(row.area), parseFloat(row.rate), parseInt(row.qty), parseFloat(row.amt));
 
     document.getElementById("createList").appendChild(row1);
     document.getElementById("copyList").appendChild(row2);
-    rowCounter++;
   });
 
   updateSerialNumbers();
@@ -155,6 +272,7 @@ function clearAllCustomerDetails() {
   document.getElementById("billDate").value = "";
   document.getElementById("custPhone").value = "";
   saveToLocalStorage();
+  saveStateToHistory();
 }
 
 function clearAllItems() {
@@ -183,11 +301,10 @@ function clearAllItems() {
   updateSerialNumbers();
   updateTotal();
   saveToLocalStorage();
+  saveStateToHistory();
 }
 
 function printBill() {
-  
-
   window.print();
 }
 
@@ -222,8 +339,124 @@ function downloadPDF() {
   html2pdf().set(opt).from(element).save();
 }
 
+// Undo/Redo functionality
+function saveStateToHistory() {
+  // If we're not at the end of history, discard future states
+  if (historyIndex < historyStack.length - 1) {
+    historyStack = historyStack.slice(0, historyIndex + 1);
+  }
+  
+  const state = {
+    items: Array.from(document.querySelectorAll('#createList tr[data-id]')).map(row => {
+      const cells = row.children;
+      return {
+        id: row.dataset.id,
+        item: cells[1].innerHTML,
+        area: cells[2].textContent,
+        rate: cells[3].textContent,
+        qty: cells[4].textContent,
+        amt: cells[5].textContent
+      };
+    }),
+    company: {
+      name: document.getElementById("companyName").textContent,
+      address: document.getElementById("companyAddr").textContent,
+      phone: document.getElementById("companyPhone").textContent
+    },
+    customer: {
+      name: document.getElementById("custName").value,
+      billNo: document.getElementById("billNo").value,
+      address: document.getElementById("custAddr").value,
+      date: document.getElementById("billDate").value,
+      phone: document.getElementById("custPhone").value
+    }
+  };
+  
+  historyStack.push(JSON.stringify(state));
+  historyIndex = historyStack.length - 1;
+}
 
-window.onload = loadFromLocalStorage;
+function restoreStateFromHistory() {
+  if (historyIndex < 0 || historyIndex >= historyStack.length) return;
+  
+  const state = JSON.parse(historyStack[historyIndex]);
+  
+  // Restore company info
+  document.getElementById("companyName").textContent = state.company.name;
+  document.getElementById("companyAddr").textContent = state.company.address;
+  document.getElementById("companyPhone").textContent = state.company.phone;
+  
+  // Restore customer info
+  document.getElementById("custName").value = state.customer.name;
+  document.getElementById("billNo").value = state.customer.billNo;
+  document.getElementById("custAddr").value = state.customer.address;
+  document.getElementById("billDate").value = state.customer.date;
+  document.getElementById("custPhone").value = state.customer.phone;
+  
+  // Restore items
+  document.getElementById("createList").innerHTML = `
+    <tr>
+      <th>Sr No</th>
+      <th>Particulars</th>
+      <th>Area</th>
+      <th>Rate</th>
+      <th>Qty</th>
+      <th>Amount</th>
+      <th>Remove</th>
+    </tr>
+  `;
+  document.getElementById("copyList").innerHTML = `
+    <tr>
+      <th>Sr No</th>
+      <th>Particulars</th>
+      <th>Area</th>
+      <th>Rate</th>
+      <th>Qty</th>
+      <th>Amount</th>
+      <th>Remove</th>
+    </tr>
+  `;
+  
+  // Find the highest row ID to continue counting from there
+  let maxId = 0;
+  state.items.forEach(row => {
+    const idNum = parseInt(row.id.split('-')[1]);
+    if (idNum > maxId) maxId = idNum;
+  });
+  rowCounter = maxId + 1;
+  
+  state.items.forEach(row => {
+    const row1 = createTableRow(row.id, row.item, parseFloat(row.area), parseFloat(row.rate), parseInt(row.qty), parseFloat(row.amt));
+    const row2 = createTableRow(row.id, row.item, parseFloat(row.area), parseFloat(row.rate), parseInt(row.qty), parseFloat(row.amt));
+
+    document.getElementById("createList").appendChild(row1);
+    document.getElementById("copyList").appendChild(row2);
+  });
+  
+  updateSerialNumbers();
+  updateTotal();
+  saveToLocalStorage();
+}
+
+function undoAction() {
+  if (historyIndex > 0) {
+    historyIndex--;
+    restoreStateFromHistory();
+  }
+}
+
+function redoAction() {
+  if (historyIndex < historyStack.length - 1) {
+    historyIndex++;
+    restoreStateFromHistory();
+  }
+}
+
+window.onload = function() {
+  loadFromLocalStorage();
+  // Initialize history after loading from localStorage
+  setTimeout(saveStateToHistory, 100);
+};
 
 function convertToFeet(value, unit) {
   switch (unit.toLowerCase()) {
