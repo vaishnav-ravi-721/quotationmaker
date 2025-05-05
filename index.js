@@ -24,8 +24,8 @@ function addRow() {
     return;
   }
 
-  let area = convertToFeet(width, measurement) * convertToFeet(height, measurement) * quantity;
-  let amount = area * rate * quantity;
+  let area = convertToFeet(width, measurement) * convertToFeet(height, measurement);
+  let amount = (Number(area) * Number(rate)) * Number(quantity);
   const id = 'row-' + rowCounter++;
 
   const row1 = createTableRow(id, itemName, area, rate, quantity, amount);
