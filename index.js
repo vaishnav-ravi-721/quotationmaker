@@ -1,4 +1,5 @@
 
+      
 let rowCounter = 1;
 let currentlyEditingRowId = null;
 let historyStack = [];
@@ -7,6 +8,7 @@ let historyIndex = -1;
 // Initialize history when page loads
 document.addEventListener('DOMContentLoaded', function() {
   saveStateToHistory();
+  loadHistoryFromLocalStorage();
 });
 
 function show() {
@@ -15,6 +17,13 @@ function show() {
   const isHidden = bill.style.display === "none";
   bill.style.display = isHidden ? "block" : "none";
   item.style.display = isHidden ? "none" : "block";
+}
+
+function toggleHistorySidebar() {
+  const sidebar = document.getElementById("history-sidebar");
+  const overlay = document.getElementById("history-overlay");
+  sidebar.classList.toggle("open");
+  overlay.classList.toggle("open");
 }
 
 function addRow() {
@@ -314,10 +323,14 @@ function downloadPDF() {
   const page_1 = document.getElementById("createList");
   const page_2 = document.getElementById("copyList");
   const chooseColor = document.getElementById("chooseColor");
+  const historySidebar = document.getElementById("history-sidebar");
+  const historyOverlay = document.getElementById("history-overlay");
 
   hideTableColumn(page_1, 6, "none");
   hideTableColumn(page_2, 6, "none");
   chooseColor.style.display = "none";
+  historySidebar.style.display = "none";
+  historyOverlay.style.display = "none";
 
   tools.style.display = "none";
 
@@ -326,6 +339,8 @@ function downloadPDF() {
     hideTableColumn(page_1, 6, "table-cell");
     hideTableColumn(page_2, 6, "table-cell");
     chooseColor.style.display = "flex";
+    historySidebar.style.display = "block";
+    historyOverlay.style.display = "block";
   }, 2000);
 
   const opt = {
@@ -452,6 +467,135 @@ function redoAction() {
   }
 }
 
+// History sidebar functionality
+function saveToHistory() {
+  const customerName = document.getElementById("custName").value.trim() || "Unnamed Bill";
+  const billNo = document.getElementById("billNo").value.trim() || "No Bill Number";
+  const date = document.getElementById("billDate").value.trim() || new Date().toLocaleDateString();
+  
+  const historyData = {
+    id: Date.now().toString(),
+    title: `${customerName} - ${billNo}`,
+    date: date,
+    data: localStorage.getItem("billData")
+  };
+  
+  let history = JSON.parse(localStorage.getItem("billHistory") || "[]");
+  history.unshift(historyData); // Add to beginning of array
+  localStorage.setItem("billHistory", JSON.stringify(history));
+  
+  addHistoryItemToSidebar(historyData);
+}
+
+function loadHistoryFromLocalStorage() {
+  const history = JSON.parse(localStorage.getItem("billHistory") || "[]");
+  const historyList = document.getElementById("history-list");
+  historyList.innerHTML = "";
+  
+  history.forEach(item => {
+    addHistoryItemToSidebar(item);
+  });
+}
+
+function addHistoryItemToSidebar(item) {
+  const historyList = document.getElementById("history-list");
+  const historyItem = document.createElement("div");
+  historyItem.className = "history-item";
+  historyItem.innerHTML = `
+    <div class="history-item-title">${item.title}</div>
+    <div class="history-item-date">${item.date}</div>
+    <button class="history-item-remove" onclick="removeHistoryItem('${item.id}', event)">×</button>
+  `;
+  
+  historyItem.addEventListener('click', function(e) {
+    // Don't load if the remove button was clicked
+    if (!e.target.classList.contains('history-item-remove')) {
+      loadFromHistory(item);
+    }
+  });
+  
+  historyList.insertBefore(historyItem, historyList.firstChild);
+}
+
+function loadFromHistory(item) {
+  if (!item.data) return;
+  
+  const data = JSON.parse(item.data);
+  
+  // Restore company info
+  document.getElementById("companyName").textContent = data.company.name;
+  document.getElementById("companyAddr").textContent = data.company.address;
+  document.getElementById("companyPhone").textContent = data.company.phone;
+  
+  // Restore customer info
+  document.getElementById("custName").value = data.customer.name;
+  document.getElementById("billNo").value = data.customer.billNo;
+  document.getElementById("custAddr").value = data.customer.address;
+  document.getElementById("billDate").value = data.customer.date;
+  document.getElementById("custPhone").value = data.customer.phone;
+  
+  // Restore items
+  document.getElementById("createList").innerHTML = `
+    <tr>
+      <th>Sr No</th>
+      <th>Particulars</th>
+      <th>Area</th>
+      <th>Rate</th>
+      <th>Qty</th>
+      <th>Amount</th>
+      <th>Remove</th>
+    </tr>
+  `;
+  document.getElementById("copyList").innerHTML = `
+    <tr>
+      <th>Sr No</th>
+      <th>Particulars</th>
+      <th>Area</th>
+      <th>Rate</th>
+      <th>Qty</th>
+      <th>Amount</th>
+      <th>Remove</th>
+    </tr>
+  `;
+  
+  // Find the highest row ID to continue counting from there
+  let maxId = 0;
+  data.items.forEach(row => {
+    const idNum = parseInt(row.id.split('-')[1]);
+    if (idNum > maxId) maxId = idNum;
+  });
+  rowCounter = maxId + 1;
+  
+  data.items.forEach(row => {
+    const row1 = createTableRow(row.id, row.item, parseFloat(row.area), parseFloat(row.rate), parseInt(row.qty), parseFloat(row.amt));
+    const row2 = createTableRow(row.id, row.item, parseFloat(row.area), parseFloat(row.rate), parseInt(row.qty), parseFloat(row.amt));
+
+    document.getElementById("createList").appendChild(row1);
+    document.getElementById("copyList").appendChild(row2);
+  });
+  
+  updateSerialNumbers();
+  updateTotal();
+  saveToLocalStorage();
+  toggleHistorySidebar();
+}
+
+function removeHistoryItem(id, event) {
+  event.stopPropagation(); // Prevent triggering the load function
+  
+  let history = JSON.parse(localStorage.getItem("billHistory") || "[]");
+  history = history.filter(item => item.id !== id);
+  localStorage.setItem("billHistory", JSON.stringify(history));
+  
+  // Remove from UI
+  const historyItems = document.querySelectorAll('.history-item');
+  historyItems.forEach(item => {
+    if (item.querySelector('.history-item-remove').getAttribute('onclick').includes(id)) {
+      item.remove();
+    }
+  });
+}
+
 window.onload = function() {
   loadFromLocalStorage();
   // Initialize history after loading from localStorage
@@ -483,12 +627,17 @@ function hideTableColumn(table, columnIndex, display) {
 }
 
 function clearLocalStorageAndReload() {
+  // Save current state to history before clearing
+  saveToHistory();
+  
   clearAllCustomerDetails();
   clearAllItems();
-  // localStorage.clear();
-  // location.reload(); 
+  saveToLocalStorage();
+  saveStateToHistory();
 }
 
 function removeOuterQuotes(str) {
   return str ? str.replace(/^["'](.*)["']$/, '$1') : '';
 }
+
+    
