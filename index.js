@@ -403,9 +403,9 @@ let rowCounter = 1;
         const opt = {
           margin: 0.5, // Add some margin for better appearance
           filename: 'bill.pdf', // Output filename
-          image: { type: 'jpeg', quality: 0.98 }, // Image quality
+          image: { type: 'jpeg', quality: 100 }, // Image quality
           html2canvas: {
-              scale: 2, // Increase scale for better resolution
+              scale: 5, // Increase scale for better resolution
               useCORS: true,
               logging: true, // Enable logging for debugging
               allowTaint: true // Allow tainting for cross-origin images if any (use with caution)
