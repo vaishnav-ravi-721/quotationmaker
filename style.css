@@ -214,7 +214,7 @@
         position: fixed;
         top: 0;
         /* Adjusted right position for closed state */
-        right: -350px; /* Match the width to hide completely */
+        right: -450px; /* Match the width to hide completely */
         width: 350px;
         height: 100%;
         background-color: white;
@@ -329,11 +329,11 @@
           flex-direction: column;
         }
 
-        .customer-details table tr {
-          display: flex;
+        /* .customer-details table tr { */
+          /* display: flex;
           flex-direction: column;
-          margin-bottom: 10px;
-        }
+          margin-bottom: 10px; */
+        /* } */
 
         .customer-details input {
           width: 100%;
@@ -354,15 +354,19 @@
         }
 
         /* Mobile layout for customer details inputs */
-        .customer-details table td {
-            display: flex; /* Use flex for label and input */
-            flex-direction: column; /* Stack label and input */
-            padding: 5px 0; /* Adjust padding */
-        }
+        /* .customer-details table td { */
+            /* display: flex; 
+           
+            flex-direction: column; 
+          
+            padding: 5px 0;  */
+            /* Adjust padding */ /* Use flex for label and input */  /* Stack label and input */
+        /* } */
 
-         .customer-details table td.label {
-            white-space: normal; /* Allow label to wrap */
-         }
+         /* .customer-details table td.label { */
+           /* white-space: normal;  */
+           /* Allow label to wrap */
+         /* } */
 
         .customer-details input {
             width: 100%; /* Make inputs full width */
@@ -373,6 +377,6 @@
         #history-sidebar {
           width: 80%;
           /* Adjusted right position for closed state on mobile */
-          right: -80%;
+          right: -90%;
         }
       }
