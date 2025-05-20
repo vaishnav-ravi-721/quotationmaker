@@ -58,6 +58,9 @@
         gap: 20px;
         flex-wrap: wrap;
       }
+      #bill-container{
+        overflow: hidden;
+      }
 
       #bill-container, #add-item-container {
         background-color: white;
